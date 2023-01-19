@@ -1,31 +1,23 @@
-// We require the Hardhat Runtime Environment explicitly here. This is optional
-// but useful for running the script in a standalone fashion through `node <script>`.
-//
-// You can also run a script with `npx hardhat run <script>`. If you do that, Hardhat
-// will compile your contracts, add the Hardhat Runtime Environment's members to the
-// global scope, and execute the script.
-const hre = require("hardhat");
+const { parseEther } = require("ethers/lib/utils");
+const { ethers, upgrades } = require("hardhat");
 
-async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
-  const unlockTime = currentTimestampInSeconds + ONE_YEAR_IN_SECS;
+const main = async () => {
+  const TokenV1 = await ethers.getContractFactory("TokenV1");
+  const proxy = await upgrades.deployProxy(TokenV1, [
+    5,
+    "0x2Df3EBe4280dC7262D9644ccd5dBC41c0DE293c8",
+  ]);
+  await proxy.deployed();
 
-  const lockedAmount = hre.ethers.utils.parseEther("1");
-
-  const Lock = await hre.ethers.getContractFactory("Lock");
-  const lock = await Lock.deploy(unlockTime, { value: lockedAmount });
-
-  await lock.deployed();
-
-  console.log(
-    `Lock with 1 ETH and unlock timestamp ${unlockTime} deployed to ${lock.address}`
+  const implementationAddress = await upgrades.erc1967.getImplementationAddress(
+    proxy.address
   );
-}
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+  console.log("Proxy contract address: " + proxy.address);
+
+  console.log("Implementation contract address: " + implementationAddress);
+};
+//Proxy contract address: 0x306E45196fAaeA720E0179A29cA6799149fBA2F1
+//Implementation contract address: 0xDf4d00514EbC16b1D49a4384FbA155746f67C59e
+
+main();
